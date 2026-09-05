@@ -1,0 +1,103 @@
+name: Daily Microcap Screener
+
+# 실행 타이밍
+on:
+  schedule:
+    # 평일 오전 9시 (UTC)
+    # 미국 동부 기준: 오전 5시 (EDT 기준)
+    - cron: '0 9 * * 1-5'
+  
+  # 수동 실행 가능
+  workflow_dispatch:
+
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 저장소 checkout
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # Python 설치
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      # 의존성 설치
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      # 스크리닝 실행
+      - name: Run screener
+        env:
+          # 필요한 API 키들 (GitHub Secrets에서 자동으로 주입됨)
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          SEC_API_KEY: ${{ secrets.SEC_API_KEY }}
+        run: |
+          python src/screener.py
+          # 현재 시각 기록
+          echo "Scan completed at $(date)" >> scan_log.txt
+      
+      # 결과를 git에 커밋 (watchlist 업데이트)
+      - name: Commit updated watchlist
+        run: |
+          git config user.name "Screener Bot"
+          git config user.email "screener@bot.local"
+          git add data/watchlist.csv scan_log.txt
+          git diff --quiet && git diff --staged --quiet || git commit -m "Daily scan: $(date +'%Y-%m-%d %H:%M')"
+          git push
+        continue-on-error: true  # 변화 없을 시에도 실패하지 않음
+      
+      # Telegram 알림 전송
+      - name: Send Telegram notification
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python src/telegram_notifier.py
+        continue-on-error: true
+      
+      # 스크린 결과를 아티팩트로 저장 (GitHub UI에서 다운로드 가능)
+      - name: Upload results as artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: screening-results-${{ github.run_id }}
+          path: |
+            data/watchlist.csv
+            scan_log.txt
+          retention-days: 30
+
+  # 선택사항: 임상 데이터 변동 감시 (주 1회)
+  clinical_alert:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 10 * * 3'  # 수요일 10시
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Check clinical trial updates
+        run: |
+          python src/clinical_tracker.py
+      
+      - name: Send clinical alerts
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python src/send_clinical_alerts.py
+        continue-on-error: true
