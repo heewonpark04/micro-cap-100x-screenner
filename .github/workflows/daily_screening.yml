@@ -64,7 +64,7 @@ jobs:
       # 스크린 결과를 아티팩트로 저장 (GitHub UI에서 다운로드 가능)
       - name: Upload results as artifact
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: screening-results-${{ github.run_id }}
           path: |
