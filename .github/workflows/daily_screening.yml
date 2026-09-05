@@ -17,7 +17,7 @@ jobs:
     steps:
       # 저장소 checkout
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       # Python 설치
       - name: Set up Python
@@ -79,7 +79,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Set up Python
         uses: actions/setup-python@v4
