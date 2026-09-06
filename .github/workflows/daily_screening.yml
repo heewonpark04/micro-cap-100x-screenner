@@ -32,6 +32,8 @@ jobs:
           pip install -r requirements.txt
       
       # 스크리닝 실행
+      - name: Create data directory
+        run: mkdir -p data
       - name: Run screener
         env:
           # 필요한 API 키들 (GitHub Secrets에서 자동으로 주입됨)
