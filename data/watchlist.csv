@@ -1,0 +1,2 @@
+ticker,market_cap,sector,catalyst_score,price,pe_ratio,industry,details_json
+ABUS,900000000,biotech,3,5.12,15.2,"Biopharmaceutical","{""clinical_phase"": ""Phase 2"", ""cash_position"": ""$250M""}"
